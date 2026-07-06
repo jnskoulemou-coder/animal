@@ -1,0 +1,15 @@
+.env
+client_secret.json
+token.json
+tiktok_token.json
+__pycache__/
+*.pyc
+assets/*
+output/*
+logs/*
+!assets/.gitkeep
+!output/.gitkeep
+!logs/.gitkeep
+.topic_index
+.venv
+venv/
