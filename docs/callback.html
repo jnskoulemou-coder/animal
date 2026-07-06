@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Authorizing...</title>
+</head>
+<body>
+<p>Completing authorization, please wait...</p>
+<script>
+  // TikTok redirects here (real HTTPS domain required for the "Web" platform).
+  // Bounce the same query string to the local script listening on localhost.
+  var target = "http://localhost:8921/callback" + window.location.search;
+  window.location.href = target;
+</script>
+</body>
+</html>
