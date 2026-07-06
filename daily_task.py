@@ -1,5 +1,6 @@
 import config
 import main
+import tiktok_uploader
 import youtube_uploader
 from topics import TOPICS
 
@@ -36,6 +37,9 @@ def run_daily():
         tags=["rescue animals", "animal rescue", "pet adoption", "wildlife rescue"],
         privacy_status="public",
     )
+
+    print("Uploading to TikTok (draft, needs manual publish in-app)...")
+    tiktok_uploader.upload_video_draft(result["video_path"])
 
 
 if __name__ == "__main__":

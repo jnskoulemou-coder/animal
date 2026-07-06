@@ -17,7 +17,7 @@ AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 INBOX_UPLOAD_INIT_URL = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/"
 
-REDIRECT_URI = "http://localhost:8921/callback"
+REDIRECT_URI = "https://jnskoulemou-coder.github.io/animal/callback.html"
 REDIRECT_PORT = 8921
 SCOPES = "user.info.basic,video.upload"
 TOKEN_FILE = config.ROOT_DIR / "tiktok_token.json"
@@ -69,8 +69,6 @@ def _run_oauth_flow() -> dict:
         "response_type": "code",
         "redirect_uri": REDIRECT_URI,
         "state": state,
-        "code_challenge": challenge,
-        "code_challenge_method": "S256",
     }
     auth_url = f"{AUTHORIZE_URL}?{urllib.parse.urlencode(params)}"
     print(f"Please visit this URL to authorize this application: {auth_url}")
@@ -94,7 +92,6 @@ def _run_oauth_flow() -> dict:
             "code": code,
             "grant_type": "authorization_code",
             "redirect_uri": REDIRECT_URI,
-            "code_verifier": verifier,
         },
         headers=TOKEN_REQUEST_HEADERS,
         timeout=30,
@@ -140,10 +137,24 @@ def _get_access_token() -> str:
     return token_data["access_token"]
 
 
+MAX_CHUNK_SIZE = 64 * 1024 * 1024  # TikTok FILE_UPLOAD chunk size must be <= 64MB
+MIN_CHUNK_SIZE = 5 * 1024 * 1024  # ...and >= 5MB (except when the whole file is one chunk)
+
+
+def _plan_chunks(video_size: int):
+    if video_size <= MAX_CHUNK_SIZE:
+        return video_size, 1
+    total_chunk_count = -(-video_size // MAX_CHUNK_SIZE)  # ceil division
+    chunk_size = -(-video_size // total_chunk_count)  # roughly even chunks
+    chunk_size = max(chunk_size, MIN_CHUNK_SIZE)
+    return chunk_size, total_chunk_count
+
+
 def upload_video_draft(video_path: Path) -> str:
     """Upload a video to the authorized creator's TikTok inbox as a draft (not published)."""
     access_token = _get_access_token()
     video_size = video_path.stat().st_size
+    chunk_size, total_chunk_count = _plan_chunks(video_size)
 
     init_response = requests.post(
         INBOX_UPLOAD_INIT_URL,
@@ -155,12 +166,14 @@ def upload_video_draft(video_path: Path) -> str:
             "source_info": {
                 "source": "FILE_UPLOAD",
                 "video_size": video_size,
-                "chunk_size": video_size,
-                "total_chunk_count": 1,
+                "chunk_size": chunk_size,
+                "total_chunk_count": total_chunk_count,
             }
         },
         timeout=30,
     )
+    if not init_response.ok:
+        print(f"[DEBUG] init response body: {init_response.text}")
     init_response.raise_for_status()
     init_data = init_response.json()
     if init_data.get("error", {}).get("code") != "ok":
@@ -170,18 +183,24 @@ def upload_video_draft(video_path: Path) -> str:
     publish_id = init_data["data"]["publish_id"]
 
     with open(video_path, "rb") as f:
-        video_bytes = f.read()
+        for i in range(total_chunk_count):
+            start = i * chunk_size
+            end = min(start + chunk_size, video_size) - 1
+            f.seek(start)
+            chunk_bytes = f.read(end - start + 1)
 
-    upload_response = requests.put(
-        upload_url,
-        headers={
-            "Content-Type": "video/mp4",
-            "Content-Range": f"bytes 0-{video_size - 1}/{video_size}",
-        },
-        data=video_bytes,
-        timeout=300,
-    )
-    upload_response.raise_for_status()
+            upload_response = requests.put(
+                upload_url,
+                headers={
+                    "Content-Type": "video/mp4",
+                    "Content-Range": f"bytes {start}-{end}/{video_size}",
+                },
+                data=chunk_bytes,
+                timeout=300,
+            )
+            if not upload_response.ok:
+                print(f"[DEBUG] chunk {i} upload response: {upload_response.text}")
+            upload_response.raise_for_status()
 
     print(f"Uploaded as draft to TikTok inbox. publish_id={publish_id}")
     return publish_id
