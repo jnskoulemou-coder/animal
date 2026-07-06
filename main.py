@@ -1,4 +1,5 @@
 import argparse
+import shutil
 from pathlib import Path
 
 import config
@@ -6,6 +7,8 @@ import fact_generator
 import video_assembler
 import visuals
 import voice_generator
+
+DOWNLOADS_DIR = Path.home() / "Downloads"
 
 
 def run(topic: str, visual_query: str = None) -> dict:
@@ -31,6 +34,11 @@ def run(topic: str, visual_query: str = None) -> dict:
     video_assembler.assemble_video(voice_path, visual_paths, script, output_path)
 
     print(f"Done: {output_path}")
+
+    downloads_copy = DOWNLOADS_DIR / output_path.name
+    shutil.copy2(output_path, downloads_copy)
+    print(f"Copied to {downloads_copy}")
+
     return {"video_path": output_path, "script": script, "topic": topic}
 
 
