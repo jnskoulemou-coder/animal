@@ -9,7 +9,7 @@ from googleapiclient.http import MediaFileUpload
 
 import config
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = ["https://www.googleapis.com/auth/youtube"]
 CLIENT_SECRET_FILE = config.ROOT_DIR / "client_secret.json"
 TOKEN_FILE = config.ROOT_DIR / "token.json"
 
@@ -66,6 +66,16 @@ def upload_video(
     video_id = response["id"]
     print(f"Uploaded: https://www.youtube.com/watch?v={video_id}")
     return video_id
+
+
+def set_privacy(video_id: str, privacy_status: str) -> None:
+    creds = _get_credentials()
+    youtube = build("youtube", "v3", credentials=creds)
+    youtube.videos().update(
+        part="status",
+        body={"id": video_id, "status": {"privacyStatus": privacy_status}},
+    ).execute()
+    print(f"Video {video_id} privacy set to {privacy_status}")
 
 
 def main():

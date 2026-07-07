@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import config
 import main
 import tiktok_uploader
@@ -40,6 +42,25 @@ def run_daily():
 
     print("Uploading to TikTok (draft, needs manual publish in-app)...")
     tiktok_uploader.upload_video_draft(result["video_path"])
+
+    _cleanup(result)
+
+
+def _cleanup(result: dict) -> None:
+    """Remove the generated video and intermediate files once both uploads succeeded,
+    so finished videos don't pile up and fill the disk."""
+    paths_to_remove = [
+        result["video_path"],
+        result["downloads_copy"],
+        result["script_path"],
+        result["voice_path"],
+        *result["visual_paths"],
+    ]
+    for path in paths_to_remove:
+        path = Path(path)
+        if path.exists():
+            path.unlink()
+    print("Cleaned up local video and working files.")
 
 
 if __name__ == "__main__":

@@ -39,7 +39,15 @@ def run(topic: str, visual_query: str = None) -> dict:
     shutil.copy2(output_path, downloads_copy)
     print(f"Copied to {downloads_copy}")
 
-    return {"video_path": output_path, "script": script, "topic": topic}
+    return {
+        "video_path": output_path,
+        "downloads_copy": downloads_copy,
+        "script_path": script_path,
+        "voice_path": voice_path,
+        "visual_paths": visual_paths,
+        "script": script,
+        "topic": topic,
+    }
 
 
 def main():

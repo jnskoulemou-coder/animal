@@ -16,10 +16,11 @@ import config
 AUTHORIZE_URL = "https://www.tiktok.com/v2/auth/authorize/"
 TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/"
 INBOX_UPLOAD_INIT_URL = "https://open.tiktokapis.com/v2/post/publish/inbox/video/init/"
+DIRECT_POST_INIT_URL = "https://open.tiktokapis.com/v2/post/publish/video/init/"
 
 REDIRECT_URI = "https://jnskoulemou-coder.github.io/animal/callback.html"
 REDIRECT_PORT = 8921
-SCOPES = "user.info.basic,video.upload"
+SCOPES = "user.info.basic,video.upload,video.publish"
 TOKEN_FILE = config.ROOT_DIR / "tiktok_token.json"
 TOKEN_REQUEST_HEADERS = {
     "Content-Type": "application/x-www-form-urlencoded",
@@ -150,38 +151,26 @@ def _plan_chunks(video_size: int):
     return chunk_size, total_chunk_count
 
 
-def upload_video_draft(video_path: Path) -> str:
-    """Upload a video to the authorized creator's TikTok inbox as a draft (not published)."""
-    access_token = _get_access_token()
-    video_size = video_path.stat().st_size
-    chunk_size, total_chunk_count = _plan_chunks(video_size)
-
-    init_response = requests.post(
-        INBOX_UPLOAD_INIT_URL,
+def _init_upload(url: str, access_token: str, body: dict) -> tuple[str, str]:
+    response = requests.post(
+        url,
         headers={
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         },
-        json={
-            "source_info": {
-                "source": "FILE_UPLOAD",
-                "video_size": video_size,
-                "chunk_size": chunk_size,
-                "total_chunk_count": total_chunk_count,
-            }
-        },
+        json=body,
         timeout=30,
     )
-    if not init_response.ok:
-        print(f"[DEBUG] init response body: {init_response.text}")
-    init_response.raise_for_status()
-    init_data = init_response.json()
-    if init_data.get("error", {}).get("code") != "ok":
-        raise RuntimeError(f"Upload init failed: {init_data}")
+    if not response.ok:
+        print(f"[DEBUG] init response body: {response.text}")
+    response.raise_for_status()
+    data = response.json()
+    if data.get("error", {}).get("code") != "ok":
+        raise RuntimeError(f"Upload init failed: {data}")
+    return data["data"]["upload_url"], data["data"]["publish_id"]
 
-    upload_url = init_data["data"]["upload_url"]
-    publish_id = init_data["data"]["publish_id"]
 
+def _upload_chunks(upload_url: str, video_path: Path, video_size: int, chunk_size: int, total_chunk_count: int) -> None:
     with open(video_path, "rb") as f:
         for i in range(total_chunk_count):
             start = i * chunk_size
@@ -202,16 +191,75 @@ def upload_video_draft(video_path: Path) -> str:
                 print(f"[DEBUG] chunk {i} upload response: {upload_response.text}")
             upload_response.raise_for_status()
 
+
+def upload_video_draft(video_path: Path) -> str:
+    """Upload a video to the authorized creator's TikTok inbox as a draft (not published)."""
+    access_token = _get_access_token()
+    video_size = video_path.stat().st_size
+    chunk_size, total_chunk_count = _plan_chunks(video_size)
+
+    upload_url, publish_id = _init_upload(
+        INBOX_UPLOAD_INIT_URL,
+        access_token,
+        {
+            "source_info": {
+                "source": "FILE_UPLOAD",
+                "video_size": video_size,
+                "chunk_size": chunk_size,
+                "total_chunk_count": total_chunk_count,
+            }
+        },
+    )
+    _upload_chunks(upload_url, video_path, video_size, chunk_size, total_chunk_count)
+
     print(f"Uploaded as draft to TikTok inbox. publish_id={publish_id}")
     return publish_id
 
 
+def publish_video_direct(video_path: Path, title: str, privacy_level: str = "SELF_ONLY") -> str:
+    """Directly publish a video to the authorized account (requires Direct Post capability).
+    privacy_level: 'SELF_ONLY' (private, safe for demo/review), 'PUBLIC_TO_EVERYONE', etc."""
+    access_token = _get_access_token()
+    video_size = video_path.stat().st_size
+    chunk_size, total_chunk_count = _plan_chunks(video_size)
+
+    upload_url, publish_id = _init_upload(
+        DIRECT_POST_INIT_URL,
+        access_token,
+        {
+            "post_info": {
+                "title": title[:150],
+                "privacy_level": privacy_level,
+                "disable_duet": False,
+                "disable_comment": False,
+                "disable_stitch": False,
+            },
+            "source_info": {
+                "source": "FILE_UPLOAD",
+                "video_size": video_size,
+                "chunk_size": chunk_size,
+                "total_chunk_count": total_chunk_count,
+            },
+        },
+    )
+    _upload_chunks(upload_url, video_path, video_size, chunk_size, total_chunk_count)
+
+    print(f"Published directly ({privacy_level}). publish_id={publish_id}")
+    return publish_id
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Upload a video to TikTok as a draft (inbox)")
+    parser = argparse.ArgumentParser(description="Upload a video to TikTok")
     parser.add_argument("video", help="Path to the mp4 file")
+    parser.add_argument("--direct", action="store_true", help="Publish directly instead of as a draft")
+    parser.add_argument("--title", default="Second Chance Paws", help="Title for direct post")
+    parser.add_argument("--privacy", default="SELF_ONLY", help="Privacy level for direct post")
     args = parser.parse_args()
 
-    upload_video_draft(Path(args.video))
+    if args.direct:
+        publish_video_direct(Path(args.video), args.title, args.privacy)
+    else:
+        upload_video_draft(Path(args.video))
 
 
 if __name__ == "__main__":
