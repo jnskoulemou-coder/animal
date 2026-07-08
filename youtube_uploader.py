@@ -46,7 +46,7 @@ def upload_video(
             "title": title[:100],
             "description": description,
             "tags": tags or [],
-            "categoryId": "15",  # Pets & Animals
+            "categoryId": "27",  # Education
         },
         "status": {
             "privacyStatus": privacy_status,

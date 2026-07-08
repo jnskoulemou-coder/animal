@@ -19,24 +19,24 @@ def _next_index() -> int:
 
 
 def _make_title(topic: str) -> str:
-    return f"{topic[0].upper()}{topic[1:]} | Second Chance Paws"
+    return f"{topic} | Revival"
 
 
 def run_daily():
     index = _next_index()
-    entry = TOPICS[index]
-    print(f"[daily_task] Topic {index + 1}/{len(TOPICS)}: {entry['topic']}")
-    result = main.run(entry["topic"], entry["visual_query"])
+    topic = TOPICS[index]
+    print(f"[daily_task] Topic {index + 1}/{len(TOPICS)}: {topic}")
+    result = main.run(topic)
 
     title = _make_title(result["topic"])
-    description = f"{result['script']}\n\n#rescueanimals #animalrescue #petadoption"
+    description = f"{result['script']}\n\n#biblestory #biblical #christian #faith"
 
     print("Uploading to YouTube (public)...")
     youtube_uploader.upload_video(
         result["video_path"],
         title=title,
         description=description,
-        tags=["rescue animals", "animal rescue", "pet adoption", "wildlife rescue"],
+        tags=["bible story", "biblical", "christian", "faith", "scripture"],
         privacy_status="public",
     )
 
@@ -54,12 +54,15 @@ def _cleanup(result: dict) -> None:
         result["downloads_copy"],
         result["script_path"],
         result["voice_path"],
-        *result["visual_paths"],
+        *result["scene_paths"],
     ]
     for path in paths_to_remove:
         path = Path(path)
         if path.exists():
-            path.unlink()
+            try:
+                path.unlink()
+            except OSError as e:
+                print(f"Could not delete {path}: {e}")
     print("Cleaned up local video and working files.")
 
 
