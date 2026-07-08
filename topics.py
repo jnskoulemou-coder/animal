@@ -50,4 +50,11 @@ TOPICS = [
     "The angel who wrestled with Jacob at Peniel",
     "An angel appearing to Joseph in a dream to warn him of danger",
     "The heavenly host praising God at Jesus's birth",
+    "John's vision of the New Jerusalem descending from heaven in Revelation",
+    "John's vision of the throne room of heaven and the twenty-four elders in Revelation",
+    "John's vision of the river of the water of life and the tree of life in Revelation",
+    "John's vision in Revelation that there will be no more death, mourning, or pain in heaven",
+    "John's vision of the wedding feast of the Lamb in Revelation",
+    "John's vision of the gates of pearl and streets of gold in Revelation",
+    "John's vision of every tribe and nation worshiping together before God's throne in Revelation",
 ]
