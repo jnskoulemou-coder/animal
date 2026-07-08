@@ -13,3 +13,4 @@ logs/*
 .topic_index
 .venv
 venv/
+*TEMP_MPY_*
