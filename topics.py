@@ -57,4 +57,10 @@ TOPICS = [
     "John's vision of the wedding feast of the Lamb in Revelation",
     "John's vision of the gates of pearl and streets of gold in Revelation",
     "John's vision of every tribe and nation worshiping together before God's throne in Revelation",
+    "Jesus's promise of his second coming with the angels in glory",
+    "The angel Gabriel's message that Jesus will return the same way he ascended",
+    "The trumpet call and the angels gathering the elect at Christ's return",
+    "Jesus's parable of staying watchful and ready for his return",
+    "John's vision in Revelation of Jesus returning as King of Kings on a white horse",
+    "The angels announcing that the kingdoms of this world will become the Kingdom of Christ",
 ]
